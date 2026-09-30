@@ -1,0 +1,6 @@
+ticket_id,device_model,issue_type,repair_duration_hours,status
+T001,iPhone 13,Pin,2.5,Completed
+T002,Samsung S23,Man hinh,4.0,Completed
+T003,Xiaomi 13,Nguon,6.5,Pending
+T004,iPhone 14,Camera,1.8,Completed
+T005,iPad Pro,Man hinh,3.2,Completed
