@@ -1,7 +1,7 @@
-# ĐẶC TẢ YÊU CẦU DỮ LIỆU (DATA REQUIREMENT SPECIFICATION) - TRACK DA
+# ĐẶC TẢ YÊU CẦU DỮ LIỆU (DATA REQUIREMENT SPECIFICATION) - LUỒNG L8
 
 ## 1. Phát biểu mức độ chi tiết (GRAIN - 1 câu)
-Mỗi bản ghi trong bảng dữ liệu phân tích đại diện cho một câu trả lời của một sinh viên trong một lượt làm bài thi trắc nghiệm cụ thể.
+Mỗi bản ghi trong bảng dữ liệu đại diện cho một phiếu phản hồi khảo sát mức độ hài lòng của một khách hàng sau khi hoàn tất một phiếu bảo hành tại một cửa hàng Mekong Mobile.
 
 ---
 
@@ -9,9 +9,9 @@ Mỗi bản ghi trong bảng dữ liệu phân tích đại diện cho một câ
 
 | Tên nguồn dữ liệu | Hệ thống nguồn | Định dạng | Tần suất cập nhật | Khối lượng ước tính |
 | :--- | :--- | :--- | :--- | :--- |
-| `raw_exam_submissions` | SQL Database (Làm bài trực tuyến) | Table (Relational) | Real-time theo lượt nộp | ~15,000 bản ghi/học kỳ |
-| `raw_student_answers` | MongoDB (Log chi tiết bài làm) | JSON / NoSQL | Real-time theo từng câu | ~450,000 bản ghi/học kỳ |
-| `master_questions` | SQL Database (Ngân hàng câu hỏi) | Table (Relational) | Khi giảng viên cập nhật | ~5,000 câu hỏi |
+| `raw_survey_feedback` | Máy tính bảng quầy dịch vụ (App khảo sát) | Table (SQL Server) | Real-time theo lượt khách đánh giá | ~25,000 bản ghi/tháng |
+| `raw_warranty_tickets` | Hệ thống Service Desk (Smart CRM L2) | Table (SQL Server) | Real-time khi đóng phiếu bảo hành | ~28,000 bản ghi/tháng |
+| `master_stores` | Hệ thống quản lý chi nhánh | Table (SQL Server) | Hàng tháng khi mở chi nhánh mới | ~50 cửa hàng |
 
 ---
 
@@ -19,21 +19,21 @@ Mỗi bản ghi trong bảng dữ liệu phân tích đại diện cho một câ
 
 | Tên cột | Kiểu dữ liệu | Ý nghĩa nghiệp vụ | Giá trị hợp lệ | Tỉ lệ thiếu (Đo mẫu) |
 | :--- | :--- | :--- | :--- | :--- |
-| `submission_id` | VARCHAR(36) | Định danh duy nhất của lượt thi | Chuỗi UUID | 0.0% |
-| `student_id` | VARCHAR(20) | Mã số sinh viên làm bài | Định dạng chuỗi số chuẩn | 0.0% |
-| `exam_id` | VARCHAR(36) | Mã đề thi | UUID tham chiếu master_exams | 0.0% |
-| `total_score` | DECIMAL(4,2) | Điểm tổng kết của lượt thi | Từ 0.00 đến 10.00 | 0.0% |
-| `time_spent_seconds` | INT | Thời gian sinh viên làm bài (giây) | > 0 và <= thời gian tối đa của đề | 0.2% |
-| `question_id` | VARCHAR(36) | Mã câu hỏi | UUID tham chiếu ngân hàng câu | 0.0% |
-| `selected_option` | CHAR(1) | Phương án sinh viên chọn | 'A', 'B', 'C', 'D' hoặc NULL | 3.5% (Do SV bỏ trống) |
-| `is_correct` | BOOLEAN | Trạng thái đúng/sai | TRUE / FALSE | 0.0% |
+| `feedback_id` | VARCHAR(36) | Định danh duy nhất của lượt phản hồi | Chuỗi UUID | 0.0% |
+| `ticket_id` | VARCHAR(36) | Mã phiếu bảo hành tương ứng | UUID tham chiếu raw_warranty_tickets | 0.0% |
+| `store_id` | VARCHAR(20) | Mã chi nhánh cửa hàng Mekong Mobile | Tham chiếu master_stores | 0.0% |
+| `csat_score` | INT | Điểm hài lòng về chất lượng sửa chữa | Số nguyên từ 1 đến 5 | 0.0% |
+| `nps_score` | INT | Điểm đánh giá mức độ sẵn sàng giới thiệu | Số nguyên từ 0 đến 10 | 1.2% (Khách bỏ qua câu này) |
+| `repair_duration_hours`| DECIMAL(5,2)| Tổng thời gian từ lúc nhận máy đến lúc trả máy (giờ) | > 0 | 0.1% |
+| `feedback_comment` | NVARCHAR(500)| Ý kiến góp ý dạng văn bản của khách hàng | Chuỗi ký tự tự do | 65.0% (Khách không ghi chú) |
+| `created_at` | DATETIME | Thời gian khách hàng gửi phản hồi | Ngày giờ hợp lệ | 0.0% |
 
 ---
 
 ## 4. Quy tắc chất lượng dữ liệu phải đạt (Data Quality Rules)
-* **Tính đầy đủ (Completeness):** Trường `total_score`, `submission_id`, `exam_id` phải đạt độ đầy đủ $\ge 99.8\%$.
-* **Tính duy nhất (Uniqueness):** Không tồn tại cặp trùng lặp `(student_id, exam_id)` đối với các bài thi chỉ cho phép thi một lần (độ trùng lặp = 0%).
-* **Tính hợp lệ (Validity):** 100% giá trị trường `total_score` phải nằm trong đoạn $[0.00, 10.00]$; trường `selected_option` chỉ nhận các giá trị `{A, B, C, D, NULL}`.
+* **Tính đầy đủ (Completeness):** Các trường khóa `feedback_id`, `ticket_id`, `store_id` và trường đo lường `csat_score` phải đạt độ đầy đủ >= 99.8%.
+* **Tính duy nhất (Uniqueness):** Mỗi phiếu bảo hành `ticket_id` chỉ được tồn tại tối đa một phản hồi khảo sát `feedback_id` tương ứng (tỷ lệ trùng lặp = 0%).
+* **Tính hợp lệ (Validity):** 100% giá trị `csat_score` nằm trong khoảng [1, 5]; 100% giá trị `nps_score` hợp lệ phải nằm trong khoảng [0, 10].
 
 ---
 
@@ -41,6 +41,6 @@ Mỗi bản ghi trong bảng dữ liệu phân tích đại diện cho một câ
 
 | Mã câu hỏi | Câu hỏi phân tích cần trả lời | Mức chi tiết báo cáo (Granularity) | Truy vết User Story |
 | :--- | :--- | :--- | :--- |
-| **AQ1** | Phổ điểm của từng lớp học phần có tuân theo phân phối chuẩn không? Có hiện tượng điểm dị biệt (outlier) bất thường không? | Theo từng Đề thi - từng Lớp học phần | US1, US3 |
-| **AQ2** | Những câu hỏi nào có độ phân biệt thấp (D < 0.2) cần được loại bỏ hoặc biên tập lại nội dung? | Theo từng Câu hỏi trắc nghiệm | US2 |
-| **AQ3** | Phương án nhiễu nào trong câu hỏi trắc nghiệm không có sinh viên nào lựa chọn? | Theo từng Phương án lựa chọn (A, B, C, D) | US4 |
+| **AQ1** | Điểm CSAT trung bình và cơ cấu NPS (Promoter/Detractor) của từng chi nhánh cửa hàng trong tháng qua như thế nào? | Theo từng Cửa hàng - từng Tháng | US1, US3 |
+| **AQ2** | Xu hướng chỉ số NPS ròng của toàn hệ thống Mekong Mobile có sự cải thiện qua các quý không? | Theo toàn hệ thống - từng Quý | US2 |
+| **AQ3** | Các ca bảo hành có thời gian sửa kéo dài trên 48 giờ có làm giảm điểm CSAT xuống dưới mức 3 sao không? | Theo khoảng thời gian sửa chữa (Time bucket) | US4 |
