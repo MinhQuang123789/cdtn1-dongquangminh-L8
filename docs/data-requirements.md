@@ -1,46 +1,60 @@
-# ĐẶC TẢ YÊU CẦU DỮ LIỆU (DATA REQUIREMENT SPECIFICATION) - LUỒNG L8
-
-## 1. Phát biểu mức độ chi tiết (GRAIN - 1 câu)
-Mỗi bản ghi trong bảng dữ liệu đại diện cho một phiếu phản hồi khảo sát mức độ hài lòng của một khách hàng sau khi hoàn tất một phiếu bảo hành tại một cửa hàng Mekong Mobile.
-
----
-
-## 2. Bảng nguồn dữ liệu (Data Source Table)
-
-| Tên nguồn dữ liệu | Hệ thống nguồn | Định dạng | Tần suất cập nhật | Khối lượng ước tính |
-| :--- | :--- | :--- | :--- | :--- |
-| `raw_survey_feedback` | Máy tính bảng quầy dịch vụ (App khảo sát) | Table (SQL Server) | Real-time theo lượt khách đánh giá | ~25,000 bản ghi/tháng |
-| `raw_warranty_tickets` | Hệ thống Service Desk (Smart CRM L2) | Table (SQL Server) | Real-time khi đóng phiếu bảo hành | ~28,000 bản ghi/tháng |
-| `master_stores` | Hệ thống quản lý chi nhánh | Table (SQL Server) | Hàng tháng khi mở chi nhánh mới | ~50 cửa hàng |
+# ĐẶC TẢ YÊU CẦU DỮ LIỆU (DATA REQUIREMENT SPECIFICATION)
+Chuyên ngành: Công nghệ Dữ liệu (Track DA)
+Luồng nghiệp vụ: L8 - Khảo sát hài lòng CSAT / NPS (Smart CRM Mekong Mobile)
 
 ---
 
-## 3. Từ điển dữ liệu nguồn (Data Dictionary)
-
-| Tên cột | Kiểu dữ liệu | Ý nghĩa nghiệp vụ | Giá trị hợp lệ | Tỉ lệ thiếu (Đo mẫu) |
-| :--- | :--- | :--- | :--- | :--- |
-| `feedback_id` | VARCHAR(36) | Định danh duy nhất của lượt phản hồi | Chuỗi UUID | 0.0% |
-| `ticket_id` | VARCHAR(36) | Mã phiếu bảo hành tương ứng | UUID tham chiếu raw_warranty_tickets | 0.0% |
-| `store_id` | VARCHAR(20) | Mã chi nhánh cửa hàng Mekong Mobile | Tham chiếu master_stores | 0.0% |
-| `csat_score` | INT | Điểm hài lòng về chất lượng sửa chữa | Số nguyên từ 1 đến 5 | 0.0% |
-| `nps_score` | INT | Điểm đánh giá mức độ sẵn sàng giới thiệu | Số nguyên từ 0 đến 10 | 1.2% (Khách bỏ qua câu này) |
-| `repair_duration_hours`| DECIMAL(5,2)| Tổng thời gian từ lúc nhận máy đến lúc trả máy (giờ) | > 0 | 0.1% |
-| `feedback_comment` | NVARCHAR(500)| Ý kiến góp ý dạng văn bản của khách hàng | Chuỗi ký tự tự do | 65.0% (Khách không ghi chú) |
-| `created_at` | DATETIME | Thời gian khách hàng gửi phản hồi | Ngày giờ hợp lệ | 0.0% |
+## 1. CÂU HỎI PHÂN TÍCH NGHIỆP VỤ (BUSINESS ANALYTICAL QUESTIONS)
+Mỗi câu hỏi phân tích đều truy vết trực tiếp về một User Story đã đặc tả:
+- **CH1:** Điểm CSAT trung bình và tỷ lệ % NPS của từng cửa hàng/trung tâm theo từng tháng là bao nhiêu? (Phục vụ: US2, US5)
+- **CH2:** Những chi nhánh nào có chỉ số CSAT sụt giảm liên tiếp trong 2 tháng gần nhất? (Phục vụ: US5)
+- **CH3:** Nhóm khách hàng chỉ trích (Detractors) chiếm tỷ lệ cao nhất ở các loại sự cố/thiết bị nào? (Phục vụ: US3)
+- **CH4:** Thời gian sửa chữa hoàn tất phiếu bảo hành (turnaround_hours) có tương quan như thế nào với mức độ hài lòng của khách hàng? (Phục vụ: US2)
 
 ---
 
-## 4. Quy tắc chất lượng dữ liệu phải đạt (Data Quality Rules)
-* **Tính đầy đủ (Completeness):** Các trường khóa `feedback_id`, `ticket_id`, `store_id` và trường đo lường `csat_score` phải đạt độ đầy đủ >= 99.8%.
-* **Tính duy nhất (Uniqueness):** Mỗi phiếu bảo hành `ticket_id` chỉ được tồn tại tối đa một phản hồi khảo sát `feedback_id` tương ứng (tỷ lệ trùng lặp = 0%).
-* **Tính hợp lệ (Validity):** 100% giá trị `csat_score` nằm trong khoảng [1, 5]; 100% giá trị `nps_score` hợp lệ phải nằm trong khoảng [0, 10].
+## 2. NGUỒN DỮ LIỆU VÀ KHỐI LƯỢNG (DATA SOURCES)
+1. **survey_responses.csv:**
+   - Định dạng: CSV, UTF-8.
+   - Tần suất nạp: Hàng ngày / Batch.
+   - Khối lượng: ~2.600 dòng.
+   - Vấn đề chất lượng: Cột comment bị khuyết ~51.4%; định dạng thời gian lẫn lộn.
+2. **tickets_history.csv:**
+   - Định dạng: CSV, UTF-8.
+   - Khối lượng: ~7.800 dòng.
+   - Vai trò: Cung cấp thông tin store_id, technician_id và thời gian xử lý phiếu bảo hành liên kết với khảo sát.
+3. **stores.csv & service_centers.csv:**
+   - Định dạng: CSV, UTF-8.
+   - Khối lượng: 24 dòng cửa hàng, 6 dòng trung tâm.
+   - Vai trò: Bảng danh mục chiều (Dimension) phân tích theo địa bàn và người quản lý.
 
 ---
 
-## 5. Danh sách câu hỏi phân tích (Analytical Questions)
+## 3. TỪ ĐIỂN DỮ LIỆU NGUỒN (DATA DICTIONARY - BẢNG SURVEY_RESPONSES)
+Tỷ lệ thiếu được đo trực tiếp trên tập dữ liệu mẫu:
+- `response_id`: Kiểu Int | Mã định danh phản hồi | Tỷ lệ thiếu: 0.0%
+- `ticket_id`: Kiểu Int | Mã phiếu bảo hành liên kết | Tỷ lệ thiếu: 0.0%
+- `score`: Kiểu Int | Điểm CSAT đánh giá từ 1 đến 5 sao | Tỷ lệ thiếu: 0.0%
+- `nps_score`: Kiểu Int | Điểm NPS đánh giá từ 0 đến 10 | Tỷ lệ thiếu: 0.0%
+- `comment`: Kiểu Text | Ý kiến đóng góp của khách hàng | Tỷ lệ thiếu: 51.4% (trường tùy chọn)
+- `responded_at`: Kiểu Text | Thời điểm khách gửi phản hồi | Tỷ lệ thiếu: 0.0%
 
-| Mã câu hỏi | Câu hỏi phân tích cần trả lời | Mức chi tiết báo cáo (Granularity) | Truy vết User Story |
-| :--- | :--- | :--- | :--- |
-| **AQ1** | Điểm CSAT trung bình và cơ cấu NPS (Promoter/Detractor) của từng chi nhánh cửa hàng trong tháng qua như thế nào? | Theo từng Cửa hàng - từng Tháng | US1, US3 |
-| **AQ2** | Xu hướng chỉ số NPS ròng của toàn hệ thống Mekong Mobile có sự cải thiện qua các quý không? | Theo toàn hệ thống - từng Quý | US2 |
-| **AQ3** | Các ca bảo hành có thời gian sửa kéo dài trên 48 giờ có làm giảm điểm CSAT xuống dưới mức 3 sao không? | Theo khoảng thời gian sửa chữa (Time bucket) | US4 |
+---
+
+## 4. QUY TẮC CHẤT LƯỢNG DỮ LIỆU (DATA QUALITY RULES - CÓ NGƯỠNG ĐO ĐƯỢC)
+- **CL1 (Completeness):** Sau khi làm sạch và nạp vào Fact, tỷ lệ khuyết thiếu của các trường khóa (ticket_id, date_key, store_key) và điểm số (csat_score, nps_score) phải đạt chính xác 0%.
+- **CL2 (Validity):** 100% bản ghi nạp vào fact_survey phải thỏa mãn: 1 <= csat_score <= 5 và 0 <= nps_score <= 10. Dòng dữ liệu vi phạm bị đẩy vào bảng reject_surveys kèm lý do.
+- **CL3 (Uniqueness):** Mỗi phiếu bảo hành (ticket_id) chỉ xuất hiện duy nhất 1 lần trong bảng dữ liệu khảo sát (tính duy nhất đạt 100% theo quy tắc QT-10).
+- **CL4 (Consistency):** 100% mã chi nhánh trong dữ liệu khảo sát phải ánh xạ thành công tới dim_store. Bản ghi không khớp được gán vào store_key = -1 (Unknown).
+
+---
+
+## 5. PHÁT BIỂU MỨC CHI TIẾT (GRAIN) VÀ QUY TẮC BIẾN ĐỔI
+- **Phát biểu GRAIN:** "Một dòng trong bảng fact_survey đại diện cho MỘT LƯỢT PHẢN HỒI ĐÁNH GIÁ KHẢO SÁT HÀI LÒNG của một khách hàng gắn liền với MỘT PHIẾU BẢO HÀNH ĐÃ ĐÓNG tại MỘT CỬA HÀNG/TRUNG TÂM vào MỘT NGÀY CỤ THỂ."
+- **Quy tắc phân loại NPS:**
+  - nps_score thuộc [9, 10]: Gán is_promoter = 1, is_detractor = 0, is_passive = 0.
+  - nps_score thuộc [7, 8]: Gán is_promoter = 0, is_detractor = 0, is_passive = 1.
+  - nps_score thuộc [0, 6]: Gán is_promoter = 0, is_detractor = 1, is_passive = 0.
+- **Công thức tính chỉ số:**
+  - Điểm CSAT trung bình = SUM(csat_score) / COUNT(*).
+  - Chỉ số % NPS = [(SUM(is_promoter) - SUM(is_detractor)) / COUNT(*)] * 100%.
