@@ -9,9 +9,9 @@
 Xây dựng pipeline dữ liệu và kho dữ liệu phân tích (Star Schema) phục vụ đo lường, giám sát chỉ số hài lòng CSAT và chỉ số khuyến nghị NPS từ phản hồi của khách hàng sau khi đóng phiếu bảo hành tại Mekong Mobile.
 
 ## 2. Yêu cầu môi trường
-- Python 3.11+
-- PostgreSQL 16
-- Thư viện: pandas, sqlalchemy, python-dotenv
+- Python 3.12 (venv)
+- Thư viện: pandas, numpy
+- Biến môi trường: xem .env.example
 
 ## 3. Cấu trúc thư mục tài liệu thiết kế (BT1)
 - `docs/srs.md`: Bản đặc tả yêu cầu rút gọn 6 mục
@@ -28,3 +28,8 @@ Xây dựng pipeline dữ liệu và kho dữ liệu phân tích (Star Schema) p
 - [x] Hoàn thiện hồ sơ Phân tích & Thiết kế BT1 (Buổi 6)
 - [ ] Xây dựng Pipeline trích xuất và làm sạch dữ liệu (Buổi 7-9)
 - [ ] Nạp kho dữ liệu và Dashboard phân tích (Buổi 10-12)
+
+## 6. Trạng thái hiện tại (buổi 8)
+- [x] Đã dựng khung thư mục `src/` theo kiến trúc Track DA.
+- [x] Chạy thành công module cốt lõi đầu tiên (đọc và thống kê dataset `survey_sample.csv`).
+- [x] Đã xử lý xong lỗi môi trường ảo (venv).
