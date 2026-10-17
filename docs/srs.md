@@ -87,3 +87,25 @@
 | **FR3** | Bảng điều khiển so sánh đối sánh chi nhánh | US3 | UC3 | MUST |
 | **FR4** | Phân tích tương quan thời gian và mức hài lòng | US4 | UC4 | SHOULD |
 | **FR5** | Đồng bộ dữ liệu định kỳ (ETL) | US6 | UC5 | SHOULD |
+
+## Mục 7. Lập luận kiến trúc (Cập nhật theo TD-02)
+- **Lập luận 2:** Vì yêu cầu nghiệp vụ cần truy xuất chính xác thông tin người quản lý phụ trách tại thời điểm đánh giá trong quá khứ (Ràng buộc nghiệp vụ cần lưu vết lịch sử trọn đời - NFR), tôi chọn cơ chế Slowly Changing Dimension (SCD) Loại 2 cho bảng `dim_store` bằng cách thêm dòng mới kèm khoảng hiệu lực (valid_from, valid_to). Đánh đổi là logic xử lý ETL phức tạp hơn và bảng dim_store phình to kích thước theo thời gian.
+
+## Mục 8. DDL Kho dữ liệu (Cập nhật theo TD-05)
+```sql
+CREATE TABLE fact_survey (
+    survey_fact_key BIGSERIAL PRIMARY KEY,
+    date_key INT NOT NULL REFERENCES dim_date(date_key),
+    store_key INT NOT NULL REFERENCES dim_store(store_key),
+    customer_key INT NOT NULL REFERENCES dim_customer(customer_key),
+    technician_key INT NOT NULL REFERENCES dim_technician(technician_key),
+    ticket_code VARCHAR(30) NOT NULL,
+    csat_score INT NOT NULL CHECK (csat_score BETWEEN 1 AND 5),
+    nps_score INT NOT NULL CHECK (nps_score BETWEEN 0 AND 10),
+    is_promoter SMALLINT NOT NULL CHECK (is_promoter IN (0, 1)),
+    is_detractor SMALLINT NOT NULL CHECK (is_detractor IN (0, 1)),
+    is_passive SMALLINT NOT NULL CHECK (is_passive IN (0, 1)),
+    turnaround_hours NUMERIC(6, 2),
+    feedback_comment TEXT,
+    loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

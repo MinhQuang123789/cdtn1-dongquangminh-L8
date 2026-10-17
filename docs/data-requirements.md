@@ -58,3 +58,17 @@ Tỷ lệ thiếu được đo trực tiếp trên tập dữ liệu mẫu:
 - **Công thức tính chỉ số:**
   - Điểm CSAT trung bình = SUM(csat_score) / COUNT(*).
   - Chỉ số % NPS = [(SUM(is_promoter) - SUM(is_detractor)) / COUNT(*)] * 100%.
+
+  ```markdown
+### Từ điển dữ liệu Kho dữ liệu (DWH) - (Cập nhật theo TD-03)
+| Tên bảng | Tên cột | Kiểu dữ liệu | Ý nghĩa |
+| :--- | :--- | :--- | :--- |
+| **fact_survey** | survey_fact_key | BIGSERIAL | Khóa chính tự tăng của bảng Fact |
+| | date_key | INT | Khóa ngoại tham chiếu ngày đánh giá |
+| | store_key | INT | Khóa ngoại tham chiếu cửa hàng/chi nhánh |
+| | csat_score | INT | Điểm hài lòng CSAT (1-5) |
+| | nps_score | INT | Điểm NPS (0-10) |
+| | feedback_comment | TEXT | Ý kiến đóng góp chi tiết của khách hàng |
+| **dim_store** | store_key | SERIAL | Khóa thay thế (Surrogate Key) |
+| | store_id | INT | Mã cửa hàng gốc (Natural Key) |
+| | manager_name | VARCHAR | Tên quản lý (SCD Loại 2) |
