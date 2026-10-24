@@ -33,3 +33,16 @@ Xây dựng pipeline dữ liệu và kho dữ liệu phân tích (Star Schema) p
 - [x] Đã dựng khung thư mục `src/` theo kiến trúc Track DA.
 - [x] Chạy thành công module cốt lõi đầu tiên (đọc và thống kê dataset `survey_sample.csv`).
 - [x] Đã xử lý xong lỗi môi trường ảo (venv).
+
+## 7. Hướng dẫn chạy hệ thống (Dành cho người chấm)
+**Cài đặt thư viện:**
+`pip install pandas streamlit plotly pytest`
+
+**1. Chạy Pipeline ETL (Đọc dữ liệu, làm sạch và xuất báo cáo chất lượng):**
+`python -m src.pipeline`
+
+**2. Chạy Unit Test (Kiểm tra quy tắc nghiệp vụ):**
+`python -m pytest tests/test_rules.py -v`
+
+**3. Khởi chạy Dashboard phân tích:**
+`streamlit run src/dashboard/app.py`

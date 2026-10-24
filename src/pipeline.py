@@ -1,27 +1,53 @@
 import pandas as pd
 import os
+import datetime
+
+from src.transform.rules import chuan_hoa_diem, doc_ngay
+from src.quality.checks import (
+    cl1_csat_hop_le, cl2_nps_hop_le, cl3_ngay_hop_le, 
+    cl4_khoa_khong_trung, cl5_co_ticket_id
+)
 
 def run_pipeline():
-    # Đường dẫn tới file csv (lấy từ thư mục gốc của project)
     file_path = 'data/sample/survey_sample.csv'
-    
-    print(f"Đang đọc dữ liệu từ: {file_path}")
+    print(f"--- Đang đọc dữ liệu từ: {file_path} ---")
     
     if not os.path.exists(file_path):
         print("Không tìm thấy file dữ liệu!")
         return
 
-    # Đọc dữ liệu bằng pandas
+    # 1. EXTRACT
     df = pd.read_csv(file_path)
+    print(f"Số dòng nguồn: {len(df)}")
+
+    # 2. TRANSFORM
+    df['score_chuan'] = df['score'].apply(lambda x: chuan_hoa_diem(x, 1, 5))
+    df['nps_chuan'] = df['nps_score'].apply(lambda x: chuan_hoa_diem(x, 0, 10))
+    df['ngay_chuan'] = df['responded_at'].apply(doc_ngay)
     
-    # In ra số dòng, số cột
-    print(f"Số dòng: {df.shape[0]}")
-    print(f"Số cột: {df.shape[1]}")
+    # 3. QUALITY
+    ket_qua = [
+        cl1_csat_hop_le(df), cl2_nps_hop_le(df), cl3_ngay_hop_le(df),
+        cl4_khoa_khong_trung(df), cl5_co_ticket_id(df)
+    ]
     
-    # In ra tỉ lệ ô trống của từng cột
-    print("\nTỉ lệ ô trống từng cột (%):")
-    missing_ratio = (df.isnull().sum() / len(df)) * 100
-    print(missing_ratio)
+    print(f"\n{'MÃ':<5} | {'TÊN QUY TẮC':<32} | {'DÒNG LỖI':<10} | {'KẾT LUẬN'}")
+    print("-" * 65)
+    for kq in ket_qua:
+        trang_thai = "ĐẠT" if kq.dat else "KHÔNG ĐẠT"
+        print(f"{kq.ma:<5} | {kq.ten:<32} | {kq.so_dong_loi:<10} | {trang_thai}")
+
+    # Đưa đoạn code lưu file vào BÊN TRONG hàm run_pipeline()
+    os.makedirs('reports', exist_ok=True)
+    report_path = f"reports/quality_report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+    with open(report_path, 'w', encoding='utf-8') as f:
+        f.write(f"Số dòng nguồn: {len(df)}\n")
+        f.write(f"{'MÃ':<5} | {'TÊN QUY TẮC':<32} | {'DÒNG LỖI':<10} | {'KẾT LUẬN'}\n")
+        f.write("-" * 65 + "\n")
+        for kq in ket_qua:
+            trang_thai = "ĐẠT" if kq.dat else "KHÔNG ĐẠT"
+            f.write(f"{kq.ma:<5} | {kq.ten:<32} | {kq.so_dong_loi:<10} | {trang_thai}\n")
+    print(f"\nĐã lưu báo cáo chất lượng tại: {report_path}")
 
 if __name__ == "__main__":
     run_pipeline()
