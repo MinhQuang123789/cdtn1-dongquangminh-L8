@@ -1,0 +1,44 @@
+services:
+  warehouse:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DWH_NAME}
+      POSTGRES_USER: ${DWH_USER}
+      POSTGRES_PASSWORD: ${DWH_PASSWORD}
+    volumes:
+      - dwh_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DWH_USER} -d ${DWH_NAME}"]
+      interval: 5s
+      retries: 10
+    ports:
+      - "${DWH_PORT:-5433}:5432"
+
+  pipeline:
+    build: .
+    environment:
+      DWH_URL: postgres://${DWH_USER}:${DWH_PASSWORD}@warehouse:5432/${DWH_NAME}
+      DATA_DIR: /data
+      LOG_LEVEL: INFO
+    volumes:
+      - ${LOCAL_DATA_DIR:-./data}:/data:ro
+      - ./reports:/app/reports
+    depends_on:
+      warehouse:
+        condition: service_healthy
+    restart: "no"
+    command: ["python", "-m", "src.pipeline"]
+
+  dashboard:
+    build: .
+    environment:
+      DWH_URL: postgres://${DWH_USER}:${DWH_PASSWORD}@warehouse:5432/${DWH_NAME}
+    depends_on:
+      warehouse:
+        condition: service_healthy
+    ports:
+      - "${DASHBOARD_PORT:-8501}:8501"
+    command: ["streamlit", "run", "src/dashboard/app.py"]
+
+volumes:
+  dwh_data:
