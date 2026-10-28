@@ -1,0 +1,8 @@
+Số dòng nguồn: 10
+MÃ    | TÊN QUY TẮC                      | DÒNG LỖI   | KẾT LUẬN
+-----------------------------------------------------------------
+CL1   | Điểm CSAT hợp lệ (1-5)           | 0          | ĐẠT
+CL2   | Điểm NPS hợp lệ (0-10)           | 0          | ĐẠT
+CL3   | Ngày phản hồi đúng định dạng     | 0          | ĐẠT
+CL4   | ID phản hồi là duy nhất          | 0          | ĐẠT
+CL5   | Bắt buộc có Ticket ID            | 0          | ĐẠT

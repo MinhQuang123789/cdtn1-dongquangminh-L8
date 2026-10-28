@@ -1,6 +1,8 @@
 import pandas as pd
 import os
 import datetime
+from src.log_config import cau_hinh_log
+import logging
 
 from src.transform.rules import chuan_hoa_diem, doc_ngay
 from src.quality.checks import (
@@ -8,17 +10,21 @@ from src.quality.checks import (
     cl4_khoa_khong_trung, cl5_co_ticket_id
 )
 
+# Cấu hình log một lần ở điểm vào chương trình
+cau_hinh_log()
+log = logging.getLogger('pipeline')
+
 def run_pipeline():
     file_path = 'data/sample/survey_sample.csv'
-    print(f"--- Đang đọc dữ liệu từ: {file_path} ---")
+    log.info(f"--- Đang đọc dữ liệu từ: {file_path} ---")
     
     if not os.path.exists(file_path):
-        print("Không tìm thấy file dữ liệu!")
+        log.error("Không tìm thấy file dữ liệu!")
         return
 
     # 1. EXTRACT
     df = pd.read_csv(file_path)
-    print(f"Số dòng nguồn: {len(df)}")
+    log.info(f"Số dòng nguồn: {len(df)}")
 
     # 2. TRANSFORM
     df['score_chuan'] = df['score'].apply(lambda x: chuan_hoa_diem(x, 1, 5))
@@ -31,13 +37,13 @@ def run_pipeline():
         cl4_khoa_khong_trung(df), cl5_co_ticket_id(df)
     ]
     
-    print(f"\n{'MÃ':<5} | {'TÊN QUY TẮC':<32} | {'DÒNG LỖI':<10} | {'KẾT LUẬN'}")
-    print("-" * 65)
+    log.info(f"\n{'MÃ':<5} | {'TÊN QUY TẮC':<32} | {'DÒNG LỖI':<10} | {'KẾT LUẬN'}")
+    log.info("-" * 65)
     for kq in ket_qua:
         trang_thai = "ĐẠT" if kq.dat else "KHÔNG ĐẠT"
-        print(f"{kq.ma:<5} | {kq.ten:<32} | {kq.so_dong_loi:<10} | {trang_thai}")
+        log.info(f"{kq.ma:<5} | {kq.ten:<32} | {kq.so_dong_loi:<10} | {trang_thai}")
 
-    # Đưa đoạn code lưu file vào BÊN TRONG hàm run_pipeline()
+    # Ghi báo cáo chất lượng
     os.makedirs('reports', exist_ok=True)
     report_path = f"reports/quality_report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
     with open(report_path, 'w', encoding='utf-8') as f:
@@ -47,7 +53,8 @@ def run_pipeline():
         for kq in ket_qua:
             trang_thai = "ĐẠT" if kq.dat else "KHÔNG ĐẠT"
             f.write(f"{kq.ma:<5} | {kq.ten:<32} | {kq.so_dong_loi:<10} | {trang_thai}\n")
-    print(f"\nĐã lưu báo cáo chất lượng tại: {report_path}")
+    
+    log.info(f"Đã lưu báo cáo chất lượng tại: {report_path}")
 
 if __name__ == "__main__":
     run_pipeline()

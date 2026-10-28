@@ -9,3 +9,6 @@ data/raw/
 !data/sample/*.csv
 .vscode/
 .idea/
+*.csv
+.env
+__pycache__/
