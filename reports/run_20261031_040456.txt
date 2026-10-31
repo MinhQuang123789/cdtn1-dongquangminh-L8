@@ -1,0 +1,3 @@
+Mã lô: 20261031_040456
+Kết luận: THANH_CONG
+Các pha hoàn thành: ['extract: OK', 'transform: OK', 'load: OK']
