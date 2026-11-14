@@ -1,6 +1,6 @@
 import csv
 
-file_path = "data/sample/warranty_sample.csv"
+file_path = "data/sample/survey_sample.csv"
 
 rows = []
 with open(file_path, mode="r", encoding="utf-8") as f:
