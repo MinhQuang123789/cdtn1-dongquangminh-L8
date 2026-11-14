@@ -1,94 +1,134 @@
-import pandas as pd
+import argparse
+import datetime
+import logging
 import os
 import sys
-import datetime
+import pandas as pd
+
 from src.log_config import cau_hinh_log
-import logging
-
 from src.transform.rules import chuan_hoa_diem, doc_ngay
+from src.transform.gia_danh import gia_danh
 from src.quality.checks import (
-    cl1_csat_hop_le, cl2_nps_hop_le, cl3_ngay_hop_le, 
-    cl4_khoa_khong_trung, cl5_co_ticket_id
+    cl1_csat_hop_le, cl2_nps_hop_le, cl3_ngay_hop_le,
+    cl4_khoa_khong_trung, cl5_co_ticket_id,
 )
+from src.quality.three_dimensions import (
+    do_day_du, do_chinh_xac, do_nhat_quan, sinh_bao_cao_ba_chieu,
+)
+from src.load.warehouse_loader import nap_du_lieu_kho
 
-# Cấu hình log một lần ở điểm vào chương trình
 cau_hinh_log()
-log = logging.getLogger('pipeline')
+log = logging.getLogger("pipeline")
 
-def run_pipeline():
-    ma_lo = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    log.info(f"Bắt đầu lô {ma_lo}")
-    
-    bao_cao = {'ma_lo': ma_lo, 'cac_pha': []}
-    
+
+def phan_loai_dong_loi(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Tach du lieu thanh 2 luong: sach (nap Fact) va ban (day vao Reject)."""
+    trung_id = df.duplicated(subset=["response_id"], keep="first")
+    danh_sach_loi = []
+    chi_so_loi = []
+
+    for idx, row in df.iterrows():
+        ly_do = []
+        ma_quy_tac = []
+
+        if pd.isna(row["score_chuan"]):
+            ma_quy_tac.append("CL1")
+            ly_do.append("Diem CSAT ngoai khoang hop le [1, 5]")
+        if pd.isna(row["nps_chuan"]):
+            ma_quy_tac.append("CL2")
+            ly_do.append("Diem NPS ngoai khoang hop le [0, 10]")
+        if pd.isna(row["ngay_chuan"]):
+            ma_quy_tac.append("CL3")
+            ly_do.append("Ngay phan hoi sai dinh dang chuan")
+        if trung_id.loc[idx]:
+            ma_quy_tac.append("CL4")
+            ly_do.append("Trung lap response_id trong lo du lieu")
+        if pd.isna(row["ticket_id"]) or str(row["ticket_id"]).strip() == "":
+            ma_quy_tac.append("CL5")
+            ly_do.append("Thieu ma phieu ticket_id bat buoc")
+
+        if ma_quy_tac:
+            ban_ghi = row.to_dict()
+            ban_ghi["reject_rule"] = ",".join(ma_quy_tac)
+            ban_ghi["reject_reason"] = "; ".join(ly_do)
+            danh_sach_loi.append(ban_ghi)
+            chi_so_loi.append(idx)
+
+    df_loi = pd.DataFrame(danh_sach_loi)
+    df_sach = df.drop(index=chi_so_loi).copy()
+    return df_sach, df_loi
+
+
+def run_pipeline(file_path: str = "data/sample/survey_sample.csv") -> int:
+    ma_lo = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    log.info(f"Bat dau lo {ma_lo}")
+    bao_cao = {"ma_lo": ma_lo, "cac_pha": []}
+
     try:
-        file_path = 'data/sample/survey_sample.csv'
-        log.info(f"--- Đang đọc dữ liệu từ: {file_path} ---")
-        
+        log.info(f"--- Doc du lieu tu: {file_path} ---")
         if not os.path.exists(file_path):
-            log.error("Không tìm thấy file dữ liệu!")
-            bao_cao['ket_luan'] = 'LOI_KHONG_CO_FILE'
+            log.error("Khong tim thay file du lieu nguon!")
+            bao_cao["ket_luan"] = "LOI_KHONG_CO_FILE"
             return 1
 
         # 1. EXTRACT
         df = pd.read_csv(file_path)
-        log.info(f"Số dòng nguồn: {len(df)}")
-        bao_cao['cac_pha'].append('extract: OK')
+        if df.empty:
+            log.warning("File du lieu rong, khong co ban ghi nao de xu ly.")
+            bao_cao["ket_luan"] = "FILE_RONG"
+            return 0
+        log.info(f"So dong nguon: {len(df)}")
+        bao_cao["cac_pha"].append("extract: OK")
 
-        # 2. TRANSFORM
-        df['score_chuan'] = df['score'].apply(lambda x: chuan_hoa_diem(x, 1, 5))
-        df['nps_chuan'] = df['nps_score'].apply(lambda x: chuan_hoa_diem(x, 0, 10))
-        df['ngay_chuan'] = df['responded_at'].apply(doc_ngay)
-        bao_cao['cac_pha'].append('transform: OK')
-        
-        # 3. QUALITY
-        ket_qua = [
+        # 2. TRANSFORM + GIA DANH HOA
+        df["score_chuan"] = df["score"].apply(lambda x: chuan_hoa_diem(x, 1, 5))
+        df["nps_chuan"] = df["nps_score"].apply(lambda x: chuan_hoa_diem(x, 0, 10))
+        df["ngay_chuan"] = df["responded_at"].apply(doc_ngay)
+        df["ticket_pseudo"] = df["ticket_id"].apply(gia_danh)
+        bao_cao["cac_pha"].append("transform: OK")
+
+        # 3. QUALITY (5 quy tac + Do 3 chieu chat luong)
+        ket_qua_5qt = [
             cl1_csat_hop_le(df), cl2_nps_hop_le(df), cl3_ngay_hop_le(df),
-            cl4_khoa_khong_trung(df), cl5_co_ticket_id(df)
+            cl4_khoa_khong_trung(df), cl5_co_ticket_id(df),
         ]
-        
-        log.info(f"\n{'MÃ':<5} | {'TÊN QUY TẮC':<32} | {'DÒNG LỖI':<10} | {'KẾT LUẬN'}")
-        log.info("-" * 65)
-        
-        khong_dat = []
-        bao_cao['quality'] = []
-        
-        for kq in ket_qua:
-            trang_thai = "ĐẠT" if kq.dat else "KHÔNG ĐẠT"
-            log.info(f"{kq.ma:<5} | {kq.ten:<32} | {kq.so_dong_loi:<10} | {trang_thai}")
-            bao_cao['quality'].append({'ma': kq.ma, 'dat': kq.dat})
-            if not kq.dat:
-                khong_dat.append(kq)
+        for kq in ket_qua_5qt:
+            tt = "DAT" if kq.dat else "CANH_BAO"
+            log.info(f"{kq.ma:<5} | {kq.ten:<32} | Loi: {kq.so_dong_loi:<5} | {tt}")
 
-        # Dừng lại nếu có quy tắc KHÔNG ĐẠT (Yêu cầu Buổi 11)
-        if khong_dat:
-            log.error("DỪNG LẠI. Nạp dữ liệu rác sẽ làm hỏng kho dữ liệu!")
-            bao_cao['ket_luan'] = 'DUNG_VI_CHAT_LUONG'
-            return 2
+        tat_ca_do = do_day_du(df) + do_chinh_xac(df) + do_nhat_quan(df)
+        sinh_bao_cao_ba_chieu(tat_ca_do, "reports/chat-luong.md")
+        bao_cao["cac_pha"].append("quality_3d: OK")
 
-        # 4. LOAD (Giả lập)
-        bao_cao['cac_pha'].append('load: OK')
-        bao_cao['ket_luan'] = 'THANH_CONG'
+        # 4. TACH DONG SACH / BAN & LOAD VAO KHO DU LIEU
+        df_sach, df_loi = phan_loai_dong_loi(df)
+        ket_qua_nap = nap_du_lieu_kho(df_sach, df_loi, ma_lo)
+        log.info(
+            f"Hoan tat nap kho: {ket_qua_nap['so_nap']} dong vao fact_survey, "
+            f"{ket_qua_nap['so_reject']} dong vao reject_survey."
+        )
+        bao_cao["cac_pha"].append("load: OK")
+        bao_cao["ket_luan"] = "THANH_CONG"
         return 0
 
     except Exception as e:
-        log.exception(f"Lô {ma_lo} thất bại ở pha đang chạy")
-        bao_cao['ket_luan'] = 'LOI_KY_THUAT'
-        bao_cao['loi'] = str(e)
+        log.exception(f"Lo {ma_lo} that bai do loi ky thuat")
+        bao_cao["ket_luan"] = "LOI_KY_THUAT"
+        bao_cao["loi"] = str(e)
         return 1
 
     finally:
-        # BÁO CÁO LUÔN ĐƯỢC GHI, kể cả khi thất bại (Yêu cầu Buổi 11)
-        os.makedirs('reports', exist_ok=True)
+        os.makedirs("reports", exist_ok=True)
         report_path = f"reports/run_{ma_lo}.txt"
-        with open(report_path, 'w', encoding='utf-8') as f:
-            f.write(f"Mã lô: {bao_cao['ma_lo']}\n")
-            f.write(f"Kết luận: {bao_cao.get('ket_luan', 'CHUA_RO')}\n")
-            f.write(f"Các pha hoàn thành: {bao_cao['cac_pha']}\n")
-            if 'loi' in bao_cao:
-                f.write(f"Lỗi: {bao_cao['loi']}\n")
-        log.info(f"Đã lưu báo cáo chạy tại: {report_path}")
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write(f"Ma lo: {bao_cao['ma_lo']}\n")
+            f.write(f"Ket luan: {bao_cao.get('ket_luan', 'CHUA_RO')}\n")
+            f.write(f"Cac pha hoan thanh: {bao_cao['cac_pha']}\n")
+        log.info(f"Da luu bao cao chay tai: {report_path}")
+
 
 if __name__ == "__main__":
-    ma_thoat = run_pipeline()
-    sys.exit(ma_thoat)
+    parser = argparse.ArgumentParser(description="Chay Pipeline ETL Khao sat CSAT/NPS")
+    parser.add_argument("--input", default="data/sample/survey_sample.csv", help="Duong dan file CSV nguon")
+    args = parser.parse_args()
+    sys.exit(run_pipeline(args.input))
