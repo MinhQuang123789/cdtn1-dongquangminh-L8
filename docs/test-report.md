@@ -1,0 +1,16 @@
+# Báo cáo Kết quả Kiểm thử (Test Report) — Luồng L8 (Track DA)
+
+| Mã | Tiền điều kiện | Các bước thực hiện | Dữ liệu thử | Kết quả mong đợi | Mức ưu tiên | Kết quả thực tế | PASS / FAIL |
+| :--- | :--- | :--- | :--- | :--- | :---: | :--- | :---: |
+| **TC-01** | Đã nạp `src.transform.rules`. | Gọi `chuan_hoa_diem` với giá trị hợp lệ CSAT và NPS. | `csat=5, 4`; `nps=8` | Trả về `5`, `4`, `8` (Luồng đúng). | Cao | Trả về chính xác `5`, `4`, `8`. | **PASS** |
+| **TC-02** | Hàm `chuan_hoa_diem` sẵn sàng. | Gọi hàm tại 2 biên hợp lệ của CSAT (`1` và `5`). | `val=1`, `val=5` | Trả về `1` và `5` (Biên hợp lệ). | Cao | Trả về `1` và `5`. | **PASS** |
+| **TC-03** | Hàm `chuan_hoa_diem` sẵn sàng. | Gọi hàm tại 2 giá trị sát ngoài biên CSAT (`0` và `6`). | `val=0`, `val=6` | Trả về `None`, không sập chương trình (Biên ngoài). | Cao | Trả về `None` cho cả `0` và `6`. | **PASS** |
+| **TC-04** | Hàm `chuan_hoa_diem` sẵn sàng. | Truyền giá trị rỗng, chuỗi chữ, `None`. | `None`, `""`, `"abc"` | Trả về `None` (Dữ liệu sai định dạng). | Trung bình | Trả về `None` cho cả 3 đầu vào. | **PASS** |
+| **TC-05** | Hàm `doc_ngay` sẵn sàng. | Gọi `doc_ngay` với chuỗi ngày giờ chuẩn ISO. | `"2026-08-01 10:15:00"` | Trả về `datetime(2026, 8, 1, 10, 15)` (Luồng đúng). | Cao | Trả về đúng `datetime(2026, 8, 1, 10, 15)`. | **PASS** |
+| **TC-06** | Hàm `doc_ngay` sẵn sàng. | Gọi `doc_ngay` với định dạng ngày sai quy định. | `"10/10/2026"`, `"khong-phai-ngay"` | Trả về `None`, không làm dừng pipeline (Dữ liệu sai). | Cao | Trả về `None` cho cả 2 chuỗi sai. | **PASS** |
+| **TC-07** | Có DataFrame trùng `response_id` và thiếu `ticket_id`. | Chạy `cl4_khoa_khong_trung` và `cl5_co_ticket_id`. | `response_id=[1,1]`, `ticket_id=None` | Ghi nhận đúng số dòng lỗi `CL4` và `CL5`. | Cao | Phát hiện đúng 2 dòng trùng `CL4` và 1 dòng thiếu `CL5`. | **PASS** |
+| **TC-08** | Biến `PSEUDO_KEY` >= 32 ký tự đã nạp. | Gọi `gia_danh("1024")` 2 lần liên tiếp. | `ticket_id="1024"` | Trả về cùng 1 chuỗi hex SHA-256 dài 64 ký tự, khác giá trị gốc. | Cao | Trả về 2 chuỗi HMAC-SHA256 giống hệt nhau (64 ký tự). | **PASS** |
+| **TC-09** | Có tệp sạch `survey_sample.csv` (10 dòng). | Chạy `do_day_du`, `do_chinh_xac`, `do_nhat_quan`. | `survey_sample.csv` (10 dòng) | Đủ 12 phép đo trên 3 chiều chất lượng đạt 100% >= ngưỡng. | Cao | 12/12 phép đo đạt 100.00% (`ĐẠT`), xuất `reports/chat-luong.md`. | **PASS** |
+| **TC-10** | PostgreSQL `healthy`, 2 bảng đích trống. | Chạy `run_pipeline("data/sample/survey_dirty_sample.csv")`. | `survey_dirty_sample.csv` (3 sạch, 4 bẩn) | Mã thoát `0`; `fact_survey=3` dòng; `reject_survey=4` dòng kèm lý do. | Cao | Mã thoát `0`; `fact_survey=3`, `reject_survey=4` đủ mã `CL1,2,3,5`. | **PASS** |
+| **TC-11** | PostgreSQL `healthy`, `fact_survey` trống. | Chạy pipeline 2 lần liên tiếp trên `survey_sample.csv`. | `survey_sample.csv` (10 dòng) | Cả 2 lần mã `0`; `COUNT(*) FROM fact_survey` vẫn bằng `10`. | Cao | Chạy 2 lần thành công; tổng dòng trong `fact_survey = 10`. | **PASS** |
+| **TC-12** | Role `nha_phan_tich` đã khởi tạo. | Kết nối user `nha_phan_tich`, đọc `dim_customer` và `v_survey_analytics`. | User `nha_phan_tich` | `dim_customer` bị `permission denied`; View đọc thành công. | Cao | `dim_customer` báo `permission denied`; View đọc thành công. | **PASS** |
