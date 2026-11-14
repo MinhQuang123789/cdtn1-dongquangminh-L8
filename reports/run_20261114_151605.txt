@@ -1,0 +1,3 @@
+Ma lo: 20261114_151605
+Ket luan: THANH_CONG
+Cac pha hoan thanh: ['extract: OK', 'transform: OK', 'quality_3d: OK', 'load: OK']
