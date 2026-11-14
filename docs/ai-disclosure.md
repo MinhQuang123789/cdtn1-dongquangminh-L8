@@ -20,7 +20,8 @@
 | **Google Gemini** | Gợi ý cấu trúc dàn ý User Story theo chuẩn INVEST, sinh mẫu tiêu chí Given-When-Then và gợi ý cấu trúc bảng Data Requirement Specification | `docs/srs.md` (Mục 2, Mục 4, Mục 6) và `docs/data-requirements.md` | Đã đọc lại, chỉnh sửa các chỉ số khảo sát (CSAT, NPS) cho phù hợp với bài toán bảo hành Mekong Mobile, tự kiểm tra bảng truy vết đảm bảo không có ô trống. |
 | **Google Gemini** | Hỗ trợ phát hiện các lỗi thường gặp trong Use Case Diagram (Lỗi 1, 2, 4) và hướng dẫn thiết lập ranh giới hệ thống trên draw.io | `docs/usecase.drawio` | Đã tự tay vẽ trực tiếp trên công cụ draw.io, đưa các Actor ra ngoài ranh giới và gán đúng tên động từ + đối tượng. |
 | *--- không dùng ---* | *(Ghi rõ các phần tự làm hoàn toàn không có sự hỗ trợ của AI)* | Sơ đồ Use Case Diagram thực tế trên draw.io, việc xuất và tổ chức cấu trúc thư mục dự án Git | Tự thao tác vẽ sơ đồ trực tiếp trên giao diện draw.io, tự chạy kiểm thử lệnh Git và tổ chức lưu trữ các tệp trong repo cá nhân. |
-
+| Google Gemini | Gợi ý cấu trúc bộ đo 3 chiều chất lượng dữ liệu, kiểm thử tích hợp PostgreSQL và thiết kế test cases biên | `src/quality/three_dimensions.py`, `tests/test_bt3_integration.py`, `docs/test-report.md` | Chạy thực tế qua Docker (`pytest -v` đạt 16/16 PASS), kiểm tra trực tiếp số dòng trong `fact_survey` và `reject_survey`. |
+| Google Gemini | Tư vấn cấu hình phân quyền PostgreSQL (View ẩn danh + Role hạn chế) và rà soát cấu trúc tài liệu kỹ thuật tiếng Anh | `db/init/002_seed_and_security.sql`, `docs/deployment-guide.md`, `docs/pipeline-doc.md` | Đăng nhập thử bằng user `nha_phan_tich` xác nhận bị chặn `dim_customer` và thực hiện phép thử máy trắng từ thư mục trống. |
 ---
 
 ### III. CAM KẾT VỀ LIÊM CHÍNH HỌC THUẬT
@@ -28,4 +29,4 @@
 > **"Tôi xác nhận đã đọc, hiểu và chịu trách nhiệm về toàn bộ nội dung nộp."**
 
 * **Chữ ký / Họ tên sinh viên:** Đồng Quang Minh  
-* **Ngày khai báo:** 03/10/2026
+* **Ngày khai báo:** 14/11/2026
