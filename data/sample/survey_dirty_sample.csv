@@ -1,0 +1,8 @@
+﻿response_id,ticket_id,score,nps_score,comment,responded_at
+101,2001,5,10,Dich vu rat tot,2026-08-06 09:00:00
+102,2002,4,8,On ap,2026-08-06 10:15:00
+103,2003,3,7,Binh thuong,2026-08-06 11:30:00
+104,2004,6,9,Loi CL1: CSAT bang 6 vuot bien,2026-08-06 12:00:00
+105,2005,4,12,Loi CL2: NPS bang 12 vuot bien,2026-08-06 13:00:00
+106,2006,5,9,Loi CL3: Sai dinh dang ngay,khong-phai-ngay
+107,,2,4,Loi CL5: Thieu ma ticket_id,2026-08-06 14:00:00
